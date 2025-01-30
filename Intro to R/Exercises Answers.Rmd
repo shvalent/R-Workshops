@@ -1,0 +1,99 @@
+---
+title: "Basic R practice Answers"
+author: "S.A. Valentine"
+date: "2/11/2021"
+output: html_document
+---
+
+# Basic R Practice Answers
+
+## Exercises
+
+For the following exercises, please create code chunks and type out all your code after each question or task.
+
+1. Describe your previous experience with R. 
+1. What skills do you hope to gain from this course? What reservations do you have regarding this course? 
+
+## Search for the filter function. 
+
+```{r}
+#there are two ways to search for the filter function. Both will pop up the help menu in the bottom right window with any functions relating to filter
+?filter
+help(filter)
+```
+
+Here, I searched for the filter function using the `?` and `help()` functions. 
+
+
+## Search for the dplyr package and look up summarize within this package. 
+
+```{r}
+#search for a specific function within the dplyr package
+??dplyr::summarise
+```
+
+Here, I used the the double colon to specify that the summarize function was in the dplyr package. Summarize allows a using to create summary statistics on a dataframe or tibble. 
+
+
+## Set your working directory to your pictures folder. 
+
+```{r}
+setwd("C:/Users/Shaley/Pictures") #set to my pictures folder
+```
+
+I used the funciton `setwd()` and the folder pathway to my pictures folder to set my working directory. 
+
+
+## Import a dataset or table.
+
+```{r}
+catfish<-read.csv("C:/Users/Shaley/Desktop/R tutorials/Data Manipulation and Visualization Class/Tidyverse-Weeks 2-6 and 9/Data/catfish origin.csv")
+```
+
+I used the fuunction `read.csv` and specified the entire file path and file name (catfish origin.csv) to read in my data. I also saved it as the object name "catfish". 
+
+
+## What is the structure of your data? What are your column headers? Change the class of your data for this R session.
+
+```{r}
+str(catfish) #strucutre of my data, currently the data is a data frame
+names(catfish) #column names/headers
+catfish<-as.matrix(catfish) #coerce the dataframe into a matrix
+str(catfish) #created a matrix now. Data is very different looking
+```
+
+Using the catfish data I previously imported, I used the `str()` function to determine the structure of the data. The catfish data are in a dataframe and there are 6 variables in this dataset and 249 observations (249 catfish). The variables are characters or integers. The `names()` function showed that the column headers/variables are sample names, reach, trib, trib.UMR, tirb.MMR, and Trib.UMR.MMR. I then coerced the dataframe into a matrix. 
+
+
+## Create an object that has a minimum of 10 pieces of data. What is the structure of this data? 
+
+```{r}
+ten<-data.frame(1:10) #create a dataframe with the numbers 1 through 10
+str(ten)#determine the structure of the dataframe we just created
+```
+
+I created a data.frame of the numbers 1 through 10 and named the object "ten". `str` determines the structure of the data which is a data frame containing one column of an integer variable. 
+
+
+## Use the R dataset "chickwts". What are the dimensions of this dataset? Use attach to create a simple boxplot of weight by feed type. 
+
+```{r}
+data(chickwts) #load the chickwts dataset
+dim(chickwts) #dimensions of chickwts data
+attach(chickwts)#attach the chickwts data so we can work directly in this dataset only
+boxplot(weight ~ feed) #data is already attached, so we don't need to call it in the boxplot funciton. We want to plot weight by feed type and the ~ designates "by"
+```
+
+I loaded the chickwts dataset and determined the dimensions are 71 observations (rows) and 2 columns. Then I created a boxplot of the weight of chicks by feed type. The casein feed type has the highest median weight, and the horsebean feed type has the lowest median weight. 
+
+
+## Add a column of data called "DPH" (days post hatch) to the chickwts dataset. Save this dataset to your desktop. 
+
+```{r}
+DPH<-sample(10:37, 71, replace=TRUE) #use the sample function to create a list of 71 numbers (because that is the number of observations in the chickwts dataset) that are in between 10 and 37. replace the values, so we can have multiple numbers the same in DPH
+
+chickwtsdph<-cbind(chickwts,DPH) #column bind the DPH object to the chickwts dataset
+head(chickwtsdph) #check the data. We see a new column called DPH has been added onto the end of the chickwts data, so now there are 3 columns instead of 2 as in the original data
+```
+
+I created a new list of 71 values of data and named it object DPH. I then added this DPH object to the original chickwts data, so now the data contains weight, feed, and DPH. 

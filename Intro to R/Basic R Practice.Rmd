@@ -1,0 +1,364 @@
+---
+title: "Basic R Practice"
+author: "S.A.Valentine"
+date: "May 23, 2019"
+output: html_document
+---
+
+# Basic R Practice
+
+R is really cool, way more powerful than other stats programs, is relatively user friendly because so many people use it and post open-source code, and is free! 
+
+I highly recommend using R for any analysis, no matter how simple it may seem (e.g. mean, sorting data, basic visualizations), because having the code written out means any analysis is reproducible for yourself and for everyone else. It might be more difficult or time consuming to learn R for something you know how to do in Excel or can learn slightly faster in Excel, but there is not much room for reproduceability using Excel or another platform. 
+
+I'm going to briefly describe some very basic R functions that can be helpful, just to get you started with R. Then we'll go into deeper stuff later. 
+
+NOTE: This is an R Markdown document, which differs from an R Script document.
+
+### Books
+
+There are several books I recommend for learning R. 
+
+1. For just getting started in R I recommend "Getting Started with R: An Introduction for Biologists" by Andy Beckerman, Dylan CHilds, and Owen Petchey. 
+
+1. For learning the tidyverse and data manipulation techniques I recommend "R for Data Science" by Hadley Wickham and Garrett Grolemund.
+
+### Commenting out code
+
+When you write in an R script, you want to annotate it (do this always), so you will need to comment out the code. Everything written in an R script will run (unless you use specific arguments), so you will have to use `#` to comment out code. The text changes color too when things are commented out.
+
+```{r, eval=FALSE} 
+This will run because its not commented out
+
+#this will not run because it is commented out
+```
+
+
+### Windows
+So you see a lot of windows open in R studio. 
+
+-This window (top left) is the coding window. You type code into different documents, and you can have multiple tabs open in this window. 
+
+-The window below (bottom left) is the Console. This is where code is shown and warnings and whatnot after you run it. 
+
+-The window in the top right is the environment. Any data or objects you have read into or created in R are shown here with the summary of the data and objects (size, observations, variables, etc.). You can click on the history tab as well to see what functions you used recently. 
+
+-The window in the bottom right has a lot of tabs on it. The files tab will show you files you recently opened in R, and you can click on them to bring them in. The Plots tab will show you plots and other figures you made in R. The Packages tab will show you what packages you have installed and which ones are currently in use. This is your *library*. The help tab is a way to search for help or anything you do search will pop up here. I don't know what the Viewer tab is. 
+
+Note that when running code in an R Markdown document, it differs from running code in an R Script document! When you run code in R Markdown, the output is shown below each code chunk in the coding window. When you run code in an R script, the output is shown in the console for tables and other information and in the bottom right window for plots/figures. 
+
+
+### Help
+
+Inevitably you won't be able to figure out functions in R. It's frustrating, but there's help. 
+
+- First, try `?function` or `help(function)`. Where the `function` is whatever function you're trying to use. For example you want to look at the `mean` function:
+
+```{r help, eval=FALSE}
+?mean
+help(mean)
+#these two code lines will get you the same information
+
+```
+
+This is the basic help function. In the bottom right window, the Documentation for the function you just searched will pop up. It gives you a description of it, what each argument (the parameters that go into the function), who created the function, and some examples. 
+
+If you don't get anything to come up for a function, you may have typed it incorrectly. Or you just don't know what the function is called or if there is one. You can try `??function` or `help.search(function)`, and this will search for things related to what you typed in. For example: 
+
+```{r help search, eval=FALSE}
+??aggregate
+help.search(aggregate)
+#these two code lines will get you the same information
+```
+
+Here, we searched for the function `aggregate`. In the same bottom right window, you can see that multiple Vignettes come up with the function `aggregate`. This means that this function is in multiple packages, so you may have to specify which package you want to use this function from. 
+
+You may also just want to look up an entire package to get help with it. You can try `help(package="packagename")`. For example:
+
+```{r help package, eval=FALSE}
+help(package="tidyverse")
+```
+
+
+You can even search the R website directly from the R console using `RSiteSearch("thing you want to search")`
+
+```{r Site Search, eval=FALSE}
+RSiteSearch("clean data")
+```
+
+
+You can basically Google anything you want to do in R and it will come up on some sort of website. StackExchange is really helpful. 
+
+
+### Packages
+
+Packages are things of functions and data that people have created and are separate from base R which is just what you download from online. To look at what packages you have, go to the Packages tab in the bottom right window. This is your library! Every package you've installed will be here. When you start up R, you need to load the packages you want to use. You can click on them in the Packages tab or use the function `library(package of desire)`.
+
+```{r load package}
+library(dplyr)
+```
+
+If you do not have a package that you need installed, you will have to install it. Either click on `Install` in the packages tab, or use the function `install.packages("package of desire")`
+```{r install package, eval=FALSE}
+install.packages("dplyr")
+```
+
+Multiple packages can have the same function name, but the functions do different things. I noticed this a lot more when I was using R for geospatial analyses, where you can filter things normally or you can filter spatial objects. In another instance, `summarize` in dplyr often needs to be specified from dplyr because it is also found in multiple functions. If this is a problem, there's an easy way to specify which package you want the function from. 
+
+Here I want to use the function `filter` from the sp (spatial) package rather than the base R filter function.
+
+
+```{r filter, eval=FALSE}
+sp::filter(data) #double colons needed
+```
+
+
+### Working Directory
+
+Your working directory is where R is getting documents and everything from along with saving things. When you install R, it will make a default working directory that will be the directory every time you open it. Sometimes you don't want to load in data from the working directory or save things to it. You can long-hand write out the file path name or set the working directory to what you want. 
+
+You can figure out what your working directory is using `getwd()`. The open parentheses mean that R will look for the working directory for R in that current state.
+
+```{r get working directory}
+getwd()
+```
+
+I can reset my working directory, let's say to my Desktop, using the `setwd()` function. 
+
+```{r set working directory}
+setwd("C:/Users/Shaley/Desktop") 
+#notice these are forward slashes, NOT BACK SLASHES
+```
+
+Ignore the warning for this right now, it's just giving a warning because it's an R Markdown document, stating that the working directory is only changed for that code chunk. So, remember that in an R Markdown document it is much wiser to change the working directory using the "Session" tab at the top -> Set Working Directory if you want the working directory to change for the entire time you have R open for the current session. 
+
+Once you change the working directory, it only lasts for that R session (until you exit out of R).
+
+
+### Loading Data
+
+You're going to want to load in files and save those that you've made in R.
+
+DO NOT TRY TO LOAD IN .XLS OR OTHER TYPES OF "NORMAL" EXCEL FILES. Things usually get messed up. 
+
+It's a pain, but always convert a .xls file to a .csv in Excel before loading it into R. 
+
+```{r load data, eval=FALSE}
+#if you set your working directory to where your data is located. 
+species<-read.csv("updatedfinalspecies1.csv") #note that the csv name needs to be in quotation marks
+
+#if you didn't set your working directory, or if this one piece of data is somewhere else, you can put the file path in instead. 
+species<-read.csv("C:/Users/Shaley Valentine/Documents/updatedfinalspecies1.csv")
+
+#if you have a subfolder you are trying to get data from within your working directory. So for example, this data is located in the Documents folder and my working directory is "C:/Users/Shaley Valentine"
+species<-read.csv("./Documents/updatedfinalspecies1.csv")
+```
+
+You can load in a lot of data types. Just don't do the Excel ones. Don't load in Excel files. 
+
+```{r graphics files, eval=FALSE}
+#shapefiles
+#need package
+library(rgdal)
+ecoregions<-readOGR("tnc_terr_ecoregions.shp")
+```
+
+```{r tables, eval=FALSE}
+#tables
+table<-read.table("mytable.txt")
+```
+
+There's a lot more that you can import, check out this tutorial on (how to import files)[https://www.datacamp.com/community/tutorials/r-data-import-tutorial]. 
+
+
+### Objects
+
+You can create objects in R using an arrow and assigning some data frame, value, spatial object, etc. to a name. 
+
+```{r banana object}
+banana<-1
+
+banana
+```
+
+Here, I assigned the value of 1 to the object banana. You can directly use this object in functions now. 
+
+```{r summary stats banana}
+sum(banana)
+mean(banana)
+```
+
+This isn't exciting with just one value in the object. 
+
+You can create a vector of values in an object using `c()`, the concatenate function.
+
+```{r}
+orange<-c(1,2,3,4,5) #concatenate
+
+orange
+
+sum(orange)
+
+mean(orange)
+```
+
+### Mode and Class
+
+Objects have a mode and class which can give you a lot of information about what's in the object. Class determines how functions act on the data, and mode is the overlying structure of the object. You can change both by coercing the data into something else. 
+
+For example, object orange above is a numeric class and numeric mode.
+
+```{r class and mode}
+class(orange)
+mode(orange)
+```
+
+
+We can change the class of orange to a data frame, which changes the mode as well. 
+
+```{r change class}
+#change the class to a dataframe
+orange<-data.frame(orange) #data.frame() is the function, and we are just overriding the original orange object
+
+class(orange) #data.frame
+
+mode(orange) #list
+
+```
+
+This coercion is super helpful when you are trying to use functions. It also works for just coercing part of the data. I'll explain using the tree data set which is part of R's base data.
+
+```{r structure}
+data(trees)
+
+str(trees) #this str function (structure) is really helpful for getting a quick glance at your data. It tells you that trees has a class of "data.frame", 31 observations (data points) of 3 variables, Girth, Height and Volume. Each of these variables also has a class, which is "num" or numeric. 
+
+#for some reason we want to change Girth to a factor class instead of numeric
+
+trees$Girth<-as.factor(trees$Girth) #call the data column "Girth" from the dataset "trees". The dollar sign tells R that it needs to pull Girth from the trees dataset. We are coercing the girth data into a factor using as.factor() function
+
+str(trees) #now Girth has a class of Factor
+
+#we can make Girth a numeric class again
+
+trees$Girth<-as.numeric(as.character(trees$Girth))#makes girth numeric again
+str(trees)
+```
+
+
+### Viewing Data
+
+After you import data, it's good to look at it. Throughout your data manipulations, you'll also want to glance at it periodically. 
+
+We are going to use the trees dataset to look at data in the following ways
+
+1. `head` shows the first six rows of data.
+```{r head}
+head(trees) 
+```
+
+2. `tail` shows the last six rows of data.
+```{r}
+tail(trees)
+```
+
+3. `dim` gives the dimensions (rows X columns).
+```{r dim}
+dim(trees)
+```
+
+4. `names` gives the column headers.
+```{r names}
+names(trees)
+#this function is EXTREMELY helpful when writing code later on
+```
+
+5. `View` opens the entire data in a new tab. 
+```{r view}
+View(trees) 
+```
+
+6. `nrow` gives the number of rows `ncol` gives the number of columns.
+```{r nrow ncol}
+nrow(trees)
+ncol(trees)
+```
+
+7. `ls()` gives a list of all the data files in the Global Environment (upper right window). 
+```{r}
+ls()
+```
+
+
+### Attaching and Detaching data
+
+In R you have to specify which data set you are working in for any code to run properly. If you are going to be working with one data set exclusively, it will save you time if you attach your data. This skips the step of specifying what data you are working in. 
+
+Here is an example without attaching the data: 
+```{r not attached, eval=FALSE}
+hist(trees$Girth) #you need to specify the Girth variable comes from the trees dataset. To specify use the $
+
+hist(Girth)#here, the code doesn't run because Girth is not an object in your global environment
+```
+
+Here is an example with attaching the data:
+```{r attach}
+attach(trees) #attach the data
+hist(Girth) #notice, we did not have to use trees$ to specify the dataset
+```
+
+If you need to detach the data to work on another dataset, use `detach(data)`. Otherwise you will get a masking error if you try to attach another dataset. 
+
+```{r detach}
+detach(trees)
+```
+
+
+### Setting a Seed for Repeatability
+
+Sometimes you want to repeat your random number generator sequence in R. You can save the sequence spots with `set.seed`.  
+
+```{r seed}
+#make the seed 126
+set.seed(126)
+rnorm(5) #get 5 random numbers
+
+#specify the seed again
+set.seed(126)
+rnorm(5)#get the same 5 random numbers as long as set.seed and rnorm are run together
+
+#set a new seed
+set.seed(7)
+rnorm(10)
+
+#repeat and we get the same numbers again as the set.seed(7) above
+set.seed(7)
+rnorm(10)
+```
+
+### Saving Data
+
+Now you want to write a .csv file. You probably made a data frame that you want to save. 
+
+```{r save data, eval=FALSE}
+write.csv(mydataframe, "mydataframe.csv") #call whatever object your dataframe is, then name it whatever you want in the parentheses with the .csv extension. It will save in your working directory. If you don't want it in your working directory, do it long-hand
+
+#save a table. .txt extension!
+write.table(mytable, "mytable.txt")
+```
+
+
+# Exercises
+
+For the following exercises, please create code chunks and type out all your code after each question or task.
+
+1. Describe your previous experience with R. 
+1. What skills do you hope to gain from this course? What reservations do you have regarding this course? 
+1. Search for the filter function. 
+1. Search for the dplyr package and look up summarize within this package. 
+1. Set your working directory to your pictures folder. 
+1. Import a dataset or table.
+1. What is the structure of your data? What are your column headers? Change the class of your data for this R session. 
+1. Create an object that has a minimum of 10 pieces of data. What is the structure of this data? 
+1. Use the R dataset "chickwts". What are the dimensions of this dataset? Use attach to create a simple boxplot of weight by feed type. 
+1. Add a column of data called "DPH" (days post hatch) to the chickwts dataset. Save this dataset to your desktop. 
