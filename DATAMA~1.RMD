@@ -1,0 +1,1729 @@
+---
+title: "Manipulating Data and Visualization Using the Tidyverse in R Workshop Master"
+author: "S.A. Valentine and G.R. Johnson"
+date: "02/02/2023"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Introduction
+
+This workshop will cover parts of the tidyverse including `dplyr`,
+'`readr`, `tidyr`, and `ggplot2` packages.We will use various functions
+to manipulate, clean, and visualize the data, moving from messier or raw
+data to something that is manageable, summarized, or able to be
+visualized. The aim of this workshop is to teach participants basic and
+commonly used tidyverse functions throughout the entire data
+manipulation process. We recommend using the tidyverse functions over
+most baseR functions as tidyverse code is more widely used and user
+friendly as it reads more like text and you can easily add code to
+continue manipulating your data in `dplyr` or adding graphics in
+`ggplot2`.
+
+If interested in learning about the tidyverse further, I recommend
+Hadley Wickham's
+[books](https://smile.amazon.com/Data-Science-Transform-Visualize-Model-ebook/dp/B01NAJAEN5/ref=sr_1_1?keywords=hadley+wickham&qid=1558717475&s=gateway&sr=8-1).
+R for Data science goes into more detail and is easier to follow than
+other books and provides examples.
+
+We will use two datasets for these exercises. A fisheries dataset for
+the examples and a wildlife dataset for the exercises.
+
+Fisheries Data: LTRM community assemblage housed at the Upper
+Mississippi Environmental Science Center (UMESC) with the USGS.
+
+Wildlife Data: Mexican National Commission For The Knowledge And Use Of
+Biodiversity. (2021). The North American Breeding Bird Survey in Mexico,
+2008-2018 - unprocessed data \[Data set\]. U.S. Geological Survey.
+<https://doi.org/10.5066/P9L4KBDC>
+
+NOTE: This document is an R Markdown document. Therefore, all text outside of "code chunks" is just text. Code is provided in code chunks only and you can only run code that is written in code chunks. Please refer to the R Markdown tutorial to better understand this format. 
+------------------------------------------------------------------------
+
+### Readr
+
+Readr is part of the tidyverse that allows easy import of a large
+variety of datasets without column name changes, no weird data
+conversions, and the data is read as a tibble (a type of table that is
+easier to manipulate with `dplyr` functions) rather than a dataframe as
+in baseR (which is where many of the problems of data import stem from).
+
+For examples, you can read any delimited file using the following
+functions:
+
+```{r read files, eval=FALSE}
+#read comma delimited files
+read.csv(data)
+
+library(readr)
+#read comma delimited files
+read_csv(data)
+#read semicolon delimited files
+read_csv2(data)
+#read tab delimited filed
+read_tsv(data)
+#read a file with any delimiter
+read_delim(data)
+#read fixed-width files
+read_fwf(data)
+#read a table with columns separated by white space
+read_table(data)
+```
+
+You can write files using the following functions:
+
+```{r write files, eval=FALSE}
+#write a .csv
+write.csv(data)
+
+library(readr)
+#write a .csv
+write_csv(data)
+#write a .csv for Excel specifically
+write_excel_csv(data)
+#write a tab delimited file
+write_tsv(data)
+```
+
+You can add many arguments to these reading and writing functions
+including skip rows (sometimes metadata is at the top of the data),
+header included or not, adding new lines, how to denote NAs, column type
+(data, integer, character), etc. For example, if R reads your data
+columns as an incorrect type, you can specify the column type when
+reading in the data. Use the `col_types` function as we will see in the
+example of reading the fish dataset.
+
+We will use fish community data that was collected by the Long Term
+Resource Monitoring element of the Upper Mississippi River Restoration
+Program. These data are housed by the USGS through the Upper Mississippi
+Environmental Sciences Center and are freely available to use. These
+data are a subset of the fish community sampled in 2018.
+
+```{r read fish data}
+library(tidyverse) #load the tidyverse package
+fish<-read_csv("./2018 LTRM data.csv", col_types= list(weight =col_double())) #change the weight column to a numeric rather than a character string
+fish<-filter(fish, fishcode !="LMBS" & fishcode!="WRMH")
+
+#If you don't specify the column type while bringing in the data, you can coerce the columns either within a function or permanently using wrappers such as as.factor(), as.numeric()
+
+#example in a function NOT PERMANENT CHANGE:
+ggplot(fish, aes(as.factor(fishcode), weight))+
+  geom_boxplot()
+
+#example as permanent change: 
+fish$fishcode<-as.factor(fish$fishcode)
+
+#However, if a column is read as a character and is supposed to be numeric, you need two wrappers otherwise the data will change to numeric based on ranks only. For example a character list of 0, 5, 17, 19 would be coerced to 1, 2, 3, 4 when changed to a numeric only. To preserve the 0, 5, 17, 19 when converting to numeric do the following: 
+fish$weight<-as.numeric(as.character(fish$weight))
+```
+
+Before we manipulate the data, it's always a good idea to look at your
+data. There are several functions to look at the structure of your data
+and the types of variables you have. Each variable has a class (e.g.
+numeric, character, formula).
+
+```{r view fish data}
+#install dplyr
+#install.packages("dplyr")
+
+#load dplyr
+library(dplyr) 
+
+dim(fish) #provides number of columns and rows
+length(fish) #number of rows in dataset or column. Used for counting in functions as well
+#str(fish) #looks at the structure, numeric variables (num)
+#glimpse(fish) #similar to str, but a tidyverse function, notice that in #glimpse the factors are "dbl" meaning double which just refers to real numbers
+
+names(fish) #provides the names of the columns
+head(fish) #shows the first 6 rows of data
+tail(fish) #shows the last 6 rows of data
+#View(fish) #opens the data in a new tab
+```
+
+------------------------------------------------------------------------
+
+### Unique
+
+`unique()` is a handy baseR function. It shows you all of the individual
+factors in your dataset. This function is helpful for finding factor
+categories that might be duplicates because of a capitalization or
+spelling error or when trying to filter results and you want to know the
+exact factor levels and their spellings in the data.
+
+```{r unique example}
+unique(fish$fishcode) #this spits out the unique factors of species in our object
+```
+
+------------------------------------------------------------------------
+
+# Dplyr
+
+Dplyr is the most commonly used tidyverse package for managing and
+initially summarizing data. We will discuss some of the functions. For
+more details on these functions as well as others not discussed, check
+out the [dplyr webpage](dplyr.tidyverse.org/reference/)
+
+Commonly used functions in `dplyr`:
+
+\*`rename()` - renames columns
+
+\*`select()` - select columns
+
+\*`filter()` - filters rows
+
+\*`arrange()` - sort data
+
+\*`mutate()` - adds new data/manipulations
+
+\*`group_by()` - groups data
+
+\*`summarize()` - summary functions
+
+We'll go through each function and using the pipe as well. But let's
+load the package first.
+
+```{r load dplyr}
+#install.packages("dplyr")
+library(dplyr)
+```
+
+------------------------------------------------------------------------
+
+### Rename
+
+`rename()` changes the names of data columns.
+
+NOTE: `dplyr` doesn't save your results unless you save your changes as
+an object using `objectname <-`.
+
+```{r rename}
+rename(fish, Species = fishcode) #new name, then old name, note we do not have a permanent name change because we did not save our change using the objectname <- syntax
+
+fish<-rename(fish, c(Species = fishcode, Weight=weight, TL=length)) #multiple column name changes use the concatenate function (c())
+names(fish)
+```
+
+------------------------------------------------------------------------
+
+### Select
+
+`select()` selects columns of your data.
+
+```{r select, eval=F}
+species<-select(fish, Species) #data first, then what column you want to select. Here we saved the Species column as an object called "species"
+View(species)#You can see that select only pulled out the column we wanted/specified
+```
+
+You can select multiple columns as well.
+
+```{r select multiple, eval=FALSE}
+#select Species and TL columns
+speciesTL<-select(fish, Species, TL) #just separate variable/column names using a comma 
+
+#select all columns in between Species and Weight using ":"
+select(fish, Species:Weight) # ":" always means from-through in R. So this can read as select from the fish dataset columns Species through Weight 
+
+#select columns 73 through 78
+select(fish, 73:78) #same result as selecting Species:Weight
+
+select(fish, c(10,13,73:78)) #add the pool and sampling period columns. We now include concatenate with the "from-through" colon
+```
+
+There are quite a few operators you can use with `select` to get certain
+columns:
+
+-   `starts_with("J")` selects columns that begin with "J"
+-   `ends_with("ber")` selects columns that end with "ber"
+-   `contains("oct")` selects columns that have "oct" within their name
+-   `matches("x.1")` selects columns with some sort of pattern
+-   `num_range("x", 1:3)` selects columns matching x1, x2, and x3
+
+You can also rearrange variables in your dataset using `everything()` if
+you want your data columns to look a certain way.
+
+```{r everything}
+#Let's put Species as the first column
+select(fish, Species, everything())
+```
+
+------------------------------------------------------------------------
+
+### Filter
+
+Filter selects rows based on some sort of specification. You can filter
+based on values or some sort of factor like species, volume size, date,
+etc.
+
+```{r filter single}
+#We're going to filter first based on TL 
+
+large<-filter(fish, TL > 500) #name the new object "large", use the filter function, so specify dataframe first, then the variable  (TL) and what parameter of the variable (>500)
+#glimpse(large) #you can see that there are 246 fish with a TL of more than 500 (246 observations/rows)
+
+#let's get the Channel Catfish only
+catfish<-filter(fish, Species=="CNCF")#use the filter function. Again, specify the data frame, then the column we want to filter from (Species). Here, we want Channel Catfish only so we have to use a DOUBLE equal sign. If you use only one equal sign, it won't work.
+#glimpse(catfish)
+#there are 1,253 Channel Catfish
+```
+
+You can use the following qualifiers to filter results:
+
+-   `>` greater than
+
+-   `<` less than
+
+-   `>=` greater than or equal to
+
+-   `<=` less than or equal to
+
+-   `!=` not equal to
+
+-   `==` equal to
+
+-   `near()` near to (can sometimes run into problems with `==`)
+
+-   `between(column, x, y)` column of interest, number minimum, number
+    maximum
+
+-   `!is.na()` values that are not NAs If you want to filter for
+    multiple results (e.g. y and x), you can use the following Boolean
+    operators:
+
+-   `y & !x` want y but not x (filters for data with y, excluding those
+    with x)
+
+-   `x & y` want y and want x (filters for data with both qualifiers
+    only)
+
+-   `x | y` want x or want y (filters for data with either x or y) May
+    struggle with numeric factors
+
+-   `%in% c(x,y)` including x or y (filters for data that includes
+    either x or y) This one is the most helpful operators
+
+Let's practice with a couple of these Boolean operators.
+
+```{r filter multiple}
+#let's say you want to filter for multiple things, Let's filter for forage fish, so we want emerald shiner, bullhead minnow, and gizzard shad There are a couple ways to do this. 
+unique(fish$Species)
+
+#1. use %in% (recommended)
+forage<-filter(fish, Species %in% c("ERSN", "GZSD", "BHMW")) #%in% means "including", we're filtering from Species and including Emerald Shiner, Gizzard Shad, and Bullhead Minnow. You need to use the c() function here
+
+#glimpse(forage)
+unique(forage$Species)
+
+#2. use | which means "or". So we are filtering for species that are Emerald Shiner, Gizzard Shad, or Bullhead Minnow
+forage1<-filter(fish, Species=="ERSN" | Species=="GZSD" | Species=="BHMW")
+#glimpse(forage1)
+unique(forage1$Species)
+#the above 2 data sets are the same
+
+#3. use != to remove the other species from the fish we want. != means "not including"
+forage2<-filter(fish, Species!="CNCF" & Species!="BLGL" & Species!="FWDM" & Species!="LMBS" & Species!="WRMH")
+#glimpse(forage2)
+unique(forage2$Species)
+
+```
+
+We can see that all three objects (forage, forage1, and forage2) we just
+made are the same with only Emerald Shiner, Gizzard Shad, and Bullhead
+Minnows.
+
+What if we wanted to filter based on two or more columns, especially
+factors?
+
+```{r filter multiple columns}
+#we can use the & for this
+#let's filter only Catfish with a TL above 500
+catfish2<-filter(fish, as.numeric(TL) > 500 & Species=="CNCF")#specify dataframe, filter by Species, use &, filter by TL
+#glimpse(catfish2)
+```
+
+Sometimes you want to separate NA data from the rest of the dataset,
+it's easiest to use `is.na()` along with filter to do so.
+
+```{r filter NA, eval=FALSE}
+filter(fish, !is.na(Weight)) #we are filtering  out any values of NA in the Weight column
+#there are 3,487 observations containing weight data
+# Make sure the ! is before is.na or it will keep the NAs only
+```
+
+------------------------------------------------------------------------
+
+### Arrange
+
+Arrange will sort your data based on some sort of specification you
+want. Arrange defaults to sorting in ascending order, but you can
+specify using another argument if you want descending order.
+
+```{r arrange}
+#arrange in ascending order of TL
+arrange(fish, TL)
+
+#arrange in descending order of Weight
+arrange(fish, desc(Weight))
+
+```
+
+------------------------------------------------------------------------
+
+### Mutate
+
+Mutate let's you create new data columns using the data you already have
+and tacks on the data to your existing dataframe. This is a super easy
+way to multiply data columns together or use some sort of function on
+your data.
+
+```{r mutate}
+#Let's create a new column of TL that is in cm rather than the current mm
+fish<-mutate(fish, TL_cm=TL/10) #call the data (fish), create a name for the new column (`TL(cm)`) and do whatever function you want (TL/10). 
+#glimpse(fish) #we can see our new variable TL(cm), it stays in the dataset
+
+#can also use multiple columns within the dataset to create a new one
+fish<-mutate(fish, PWR=amps*volts) #this should be the same as the pwrused column
+
+#select(fish, pwrused, PWR) #check to make sure the columns are the same
+```
+
+```{r mutate 2}
+#what percent of the total weight of catfish, does each catfish individually account for? 
+mutate(catfish2, percentwght=Weight/sum(Weight, na.rm=TRUE)*100)# weight of each catfish divided by the sum of the weights times 100 to get percent
+```
+------------------------------------------------------------------------
+
+### Transmute
+
+Transmute does the same thing as mutate, but only keeps the new
+variables, not the original variables.
+
+```{r transmute}
+fish2<-transmute(fish, PWR=amps*volts, TL_cm=TL/10) #same code as mutate, just add "trans"; this is a new dataset with only our two variables we made
+#fish2 #we see that the original data is not in the fish2 dataframe 
+```
+
+------------------------------------------------------------------------
+
+### Summarize
+
+Summarize allows you to calculate summaries of data, which can be really
+helpful for graphing and general summary stats of your data later.
+
+```{r summarize}
+#what's the mean TL and Weight of all the fish?
+summarize(fish, meanTL=mean(TL), meanW=mean(!is.na(Weight))) #remove NAs from the Weight column to get a mean
+#summarize is more powerful when it's combined with group_by, but we need to learn the pipe first
+```
+
+------------------------------------------------------------------------
+
+### The pipe
+
+Before we continue with `group_by`, you need to know what the pipe is.
+The pipe is symbolized by `%>%`. It is a way in **ONLY** the tidyverse
+to do multiple things with data. Essentially if you use the pipe you are
+able to manipulate the data in one way and then continue to manipulate
+the data as many times as you want by just continuing to use the pipe.
+Additionally, you can pipe directly into `ggplot2` for graphing even
+though it doesn't use the pipe. There is no way to continue to
+manipulate data in Base R unless you create new objects of your data
+constantly or "add" onto data in plots and run the code together (this
+is messy and confusing). The pipe is very handy.
+
+We'll do an example of the pipe when we use `group_by` with `summarize`.
+
+------------------------------------------------------------------------
+
+### Group by
+
+Group by is really helpful with summarize. It allows you to group your
+data based on some sort of factor.
+
+```{r groupby}
+#Group the data by species, then calculate the mean TL of each species
+(fishgroup<-fish %>% #with the pipe, you specify the data you're using at the beginning. So here we specify that we are manipulating the fish dataset, then write the pipe %>%
+group_by(Species) %>% #next we are going to group the fish data by Species. This clumps the same species together. See here how we do not have to first specify the data argument, because it's already specified in the pipe. Write the pipe symbol again. 
+summarize(meanTL=round(mean(TL_cm), digits=2), #here, round the meanTL to make the output cleaner. We only have 2 decimals with digits=2
+          minTL=min(TL_cm), 
+          maxTL=max(TL_cm))) #Now we are going to use summarize to find the mean, max, and min TL of each fish species. Here, we named the mean manipulation "mean" by using "mean=". You do not have to name the summary
+```
+
+Now we have the average, max, and min of TL of each of our fish species
+in just a couple lines of code.
+
+My favorite way to get the number of observations in my data is to use
+the pipe with group_by and summarize.
+
+```{r summarize n}
+#number of fish in each species within our dataset
+fish %>%
+  group_by(Species)%>% #group by species here or any factor you want
+  summarize(N=n()) #use n() with nothing in the parentheses to get the number of observations
+```
+
+```{r mutate create proportion}
+#Often, we work with percents or proportions, so calculating them using mutate is beneficial
+
+#we want to calculate the proportion/percent of individuals in each species 
+fish %>% #take the fish dataset
+  group_by(Species) %>% #first group by species
+  count()%>% #count the number of individuals in each species
+  ungroup()%>% #ungroup the data so you can perform other manipulations/analyses on it. Group would only allow us to sum the BHMW and find a proportion within that group (which would equal 1). Ungroup allows us to determine the proportion from the entire dataset
+  mutate(prop=n/sum(n), #calculate proportion as the number of individuals in a species divide by the total number of individuals in the dataset
+         percent=n/sum(n)*100) #calculate percent which is the proportion times 100. 
+```
+
+We will now take a break to complete a set of exercises using the
+`dplyr` functions.
+
+------------------------------------------------------------------------
+
+# Exercise 1
+
+You will use the 2008-2018 North American Breeding Bird Survey data for
+Mexico to answer the following questions. You will use the tools we have
+covered so far within `dplyr` and will have approximately 30 minutes to
+complete the exercises and ask questions. If you finish early, explore
+the data on your own, walk around, etc.
+
+Task 1: Read in data. How many columns and rows are there?
+
+```{r exercise 1 task 1}
+wild<-read_csv("./bird.csv")
+#9,122 rows
+#59 columns
+```
+
+Task 2: How many species were observed between 2008 and 2018?
+
+```{r exercise 1 task 2}
+length(unique(wild$ScientificName)) #unique determines the number of unique cases in a column. Use length to get the number of unique species
+
+unique(wild$ScientificName)
+#351
+```
+
+Task 3: How many different species were observed at State 6 in route 15?
+
+```{r exercise 1 task 3}
+wild2<-wild%>% #create a new object called wild2, use the pipe to get into the wild dataset
+  filter(StateNum==6 & Route==15)
+
+#filter out only state 6 and route 15
+  length(unique(wild2$ScientificName)) #repeat the steps from Task 2 using length and unique
+  
+  #52
+```
+
+Task 4: What is the total number of sightings of each bird species at
+Stop 2 for State 2 along route 4 (i.e. across all years)? Which species
+has the greatest number of sightings here? Which species have 2
+sightings here? How many species have never been sighted at this stop?
+
+```{r exercise 1 task 4}
+stop2<-wild%>%
+  filter(StateNum==2 & Route==4) %>% #only look at state 2 and route 4
+    group_by(ScientificName)%>% #group by species
+  dplyr::summarize(Totalsightings=sum(Stop2)) #summarize to get the total number of sightings for stop 2
+
+
+
+#Greatest number
+arrange(stop2, desc(Totalsightings)) #arrange in descending order so the largest number is at the top
+
+#Corvus brachyrhynchos
+
+
+# 2 sightings? 
+filter(stop2, Totalsightings==2) #filter to get the species that have only 2 sightings
+
+#Mimus polyglottos, Streptopelia decaocto, Surnella neglecta, Tyrannus vociferans
+
+
+#never sighted
+nrow(filter(stop2, Totalsightings==0)) #get the number of speces that have never been sighted at stop 2. So filter for 0 sightings and use nrow to get the number of rows in this dataframe. 
+
+#54 bird species
+```
+
+Task 5: What proportion of the total sightings in State 6 route 59 stop
+5 were Phainopepla nitens? What species has the greatest proportion of
+sightings at this stop and what is that proportion?
+
+```{r exercise 1 task 5}
+#number of birds by species
+summary<-wild %>%
+  filter(StateNum==6, Route==59) %>% #filter by State 6 and route 59
+  group_by(ScientificName)%>% #group by species
+  summarize(Sightings=sum(Stop5)) %>%#summary using sum of stop 5
+mutate(Prop=Sightings/sum(Sightings))#divide the sightings by sum of sightings. Sightings was the total observations by species and sum(sightings) was the total observations of all the species
+
+#Proportion of Phainopepla
+summary %>%
+  filter(ScientificName=="Phainopepla nitens") #filter for the species we want
+
+#.00300 of the birds sighted are Phainopeplas
+
+# Greatest proportion
+summary %>%
+  arrange(desc(Prop)) #but now we arrange by descending so the greatest proportion is at the top of the list
+
+#Zenaida asiatica, .2246 proportion
+
+```
+
+------------------------------------------------------------------------
+
+# Data Management Continued
+
+Now we will continue using `tidyverse` functions to manipulate the data.
+
+### Related Data
+
+Sometimes you need to combine data from multiple datasets. These data
+will be related by some variable they share. You can quickly combine
+these datasets together using the tidyverse.
+
+You can do everything that the following functions do using `merge` in
+baseR; however, the tidyverse's functions are more straightforward to
+use.
+
+There are several `join` functions including: \* `inner_join` Unmatched
+data is excluded \* `right_join` All observations in 2nd (right) dataset
+are included even if not matched \* `left_join` All observations in 1st
+(left) dataset are included even if not matched \* `full_join` All
+observations in both right and left datasets are included even if not
+matched \* `semi_join` Only keeps matched observations \* `anti_join`
+Only keeps observations without a match
+
+Below are simple examples to visualize these different joins.
+
+#### Innerjoin
+
+Innerjoin allows you to match observation based on a shared variable.
+Any unmatched data will be excluded from the final joined data.
+
+```{r  create a tibble}
+(tib1<-tibble(banana=c(1,2,3),
+             x=c("x1","x2","x3")))
+(tib2<-tibble(banana=c(1,2, 4),
+             y=c("y1","y2", "y4")))
+#we just created two datasets that have the same values for the variable "banana". We can join these two datasets(tibbles) together based on this banana variable
+```
+
+```{r innerjoin}
+(x<-inner_join(tib1, tib2, by="banana"))
+#we see that our data is combined based on banana
+#any unmatched rows are not included, so y4 and x3 are not included
+```
+
+#### Outerjoins
+
+Outerjoins keep observations in one or both datasets, unlike innerjoins.
+
+```{r leftjoin}
+#this is the most used join because you usually use it just to look up data from another table
+(left<-left_join(tib1, tib2)) #all observations in the first table (tib1) are kept, so  NA is in the place of the banana 3 row for y, because it is missing
+```
+
+```{r rightjoin}
+#Right joins only keep the observations in the 2nd table (tib1)
+(right<-right_join(tib1, tib2)) #here the banana 4 row is included because tib1 contains that value (the right dataset), but banana 3 row is excluded, because it is only in the tib2 dataset
+```
+
+```{r full join}
+#a full join keeps observations from both datasets/tables
+(full<-full_join(tib1, tib2))
+#we see four rows of data here, and the missing values are present in both x and y columns
+```
+
+```{r anti join}
+(anti1<-anti_join(tib1, tib2))#antijoin keeps observations that are in the left dataset but not the right, so we only see x3 because that one was not in tib2
+
+(anti2<-anti_join(tib2, tib1))#now we only see y4 because that row was not in tib1 
+
+```
+
+The following is an example of how I would use a `left_join` as well as
+an `anti_join` to aid in my research. I have access to hundreds of fish
+otoliths to use for my microchemistry analyses. Most of the otoliths I
+want to analyze are the same ones another lab analyzes for genetics
+which is a subset of all otoliths collected. All otoliths are identified
+by a "VR barcode". So the genetics fish subset dataframe and the larger
+dataframe containing all otoliths have the VR barcode variable in
+common. Thus, I can use the VR barcode as the common variable to join
+the two dataframes. To obtain what samples from the larger otolith
+sample pool I need to use for my analyses, I use `left_join` to obtain
+them.
+
+```{r load genetics data}
+
+#gen is the subset of fish that genetic samples were taken on only. This dataframe contains only the VR barcode of the fish
+gen<-read.csv("./genetics.csv")
+```
+
+```{r genetics fish}
+
+geneticsfish<-left_join(gen, fish, by="Vital_Rate_Barcode")#left join keeps all of the values from the left (first) dataframe specified, and drops any rows in the right (second) dataframe that are not associated with data in the left dataframe. Here we are keeping only the rows associated with the Vital Rate barcode found in gen1, and dropping any leftover rows from fish
+
+#View(geneticsfish)
+dim(fish)
+dim(gen)
+dim(geneticsfish)
+
+```
+
+However, sometimes I need more samples for microchemistry than what were
+collected for genetic sampling, so I need to select more otoliths from
+all otoliths (minus the ones already completed for genetics). In this
+scenario, I want to randomly select fish from the larger dataframe that
+are not in the genetics dataframe to run analyses on. So now I would use
+`anti_join` to obtain the VR barcodes of fish that genetic samples were
+not taken for.
+
+```{r no genetics fish}
+#do a join where we don't get the genetics individuals in the dataset
+#use anti_join(x,y) #drops observations in x that have a match in y
+nogen<-anti_join(fish, gen, by="Vital_Rate_Barcode") #by is the value we are matching between the two dataframes. We are keeping all of the rows from fish that do not have the same barcode as found in the gen dataframe
+dim(nogen)
+```
+
+------------------------------------------------------------------------
+
+### Separate and Unite
+
+`Separate` takes apart multiple values that are in the same cell (i.e.
+same row and column). It will split the values based on a separator
+(e.g. /, :, ., ).
+
+```{r separate}
+library(tidyr)
+(dates<-fish %>%
+  separate(fdate, into= c("Month", "Day", "Year")) %>%
+select(2:10))#the column that needs to be separated out, into is the argument to designate the names of the new columns in order of their separation. Can separate many values within a column if needed 
+
+#glimpse(dates)
+```
+
+Separate automatically separates values based on a non alphanumeric
+value, but you can specify the separate as well. In addition, it also
+maintains the column type of the original data. If we want to change the
+resulting columns (Month, Day, and Year), we can specify the `convert`
+argument.
+
+```{r separate specifications}
+#glimpse(dates) #the sdate and fdate columns are characters, maybe we want them to be numeric
+(dates2<-fish %>%
+   separate(fdate, into= c("Month", "Day", "Year"), sep= "/", convert=TRUE))%>%
+  select(2:10)#just add the sep and convert arguments here
+#we now see that month, day, and year are integers, not characters
+#glimpse(dates2)
+glimpse(fish)
+```
+
+#### Unite
+
+Unite is the opposite of separate. It allows you to combined multiple
+columns.
+
+```{r unite}
+#let's recombine month, day, year into Date
+(dates3<-dates2 %>%
+  unite(Date, Month, Day, Year, sep="/"))#the new column name, first column to combine, 2nd column to combine,3rd column to combine, how you want to separate the values in the column
+#the default to separate the values in the column is to use the underscore, so you can specify the separator
+
+head(dates3)#The Date column is the same as the original fdate column. 
+```
+
+------------------------------------------------------------------------
+
+### Tidying Data: Pivot data, Factor Recoding, and Synthesis
+
+Tidying data can be really helpful and certain functions in R will require data to look one way, and then you may have to change it to look another way.
+
+If you have data where there are multiple factor entries in the same column and you want to separate each factor into its own column, you can do that with one easy function (`pivot_wider`). Or you can have multiple factor entries in their own columns and you want to combine them in one column (`pivot_longer`). However, this tidying should be done with data that have multiple factors. 
+
+```{r fish data summary}
+#let's create a summary table of the fish data
+#we only want 6 species of interest, so get rid of the other 2 species, find the number of observations by species and field station, and turn it into a tibble
+fish2<-fish %>%
+  filter(Species != "LMBS" & Species != "WRMH") %>%
+  group_by(Species, fstation)%>% #group by multiple factors
+  summarize(N=n())%>%
+  as_tibble() #create a tibble which is a more easily manipulated version of a table in the tidyverse
+```
+
+
+You can `pivot_wider` out one column of data into several columns which may make certain functions doable or make a table more visually appealing.
+
+```{r pivot wider}
+library(tidyr) #within the tidyr package
+#make the tibble spread out to make it easier to read
+(observations<-fish2 %>%
+  pivot_wider(id_expand=FALSE, names_from= fstation, values_from=N))#id_expand means that if you have "missing data" from columns (no temp data from October-December), you can create empty rows that fill in the missing data (=TRUE) or omit rows with missing data (=FALSE). names_from is the column of variables we want to separate into distinct columns, automatically R will make columns for each of the factors within the column selected. Values_from is the column of data values that will be filled in the new columns' cells
+
+```
+
+Now we will use several other `tidyverse` functions to change the look of the table we have made. We can use different renaming functions and factor renames to alter our text. These functions do not have to be used after a `group_by` and `summarize` combo, they can be used at any step of tidying data. 
+
+```{r rename spread columns}
+#let's rename the columns
+    (observations2 <- observations %>% dplyr::rename(`Pool 4`= `1`, `Pool 8`=`2`, `Pool 13`=`3`, `Pool 26`=`4`, `Open River`=`5`, `La Grange Pool`=`6`)) #(New name = old name)
+```
+
+
+```{r mutate data with factor recode}
+library(forcats) #within the forcats package (deals with factors)
+#lets also add sum column and row for totals
+observations2<-observations2%>%
+  # ungroup(observations2)%>% #need to ungroup the data to manipulate it. It is currently grouped because the ojbect "observations2" was created down the line from "fish2" which was a result of our group_by & summarize combo. This was only for older versions of dplyr and R
+    mutate(Total=`Pool 4`+`Pool 8`+`Pool 13`+`Pool 26`+`Open River`+`La Grange Pool`) %>% #use mutate to create a new column of data called "Total" and we will add all of the numbers from each field station together
+    mutate(Species= fct_recode(Species, #Now use mutate to rename the "factors" which are the species names. Here, we use fct_recode (factor recode)
+                             "Bullhead Minnow" = "BHMW", #New name = old name
+                             "Bluegill" = "BLGL", 
+                             "Channel Catfish" = "CNCF", 
+                             "Emerald Shiner" = "ERSN", 
+                             "Freshwater Drum" = "FWDM", 
+                             "Gizzard Shad" = "GZSD")) #column for each species
+
+```
+
+
+```{r factor collapse}
+#library(forcats)
+observations2 %>%
+  mutate(Species= fct_collapse(Species, 
+                             `Forage Fish` = c("Bullhead Minnow", "Emerald Shiner", "Gizzard Shad"), #name of new category, concatenated factors that will be in new category
+                             `Omnivore` = c("Channel Catfish"), 
+                             `Invertivore` = c("Bluegill", "Freshwater Drum")))
+
+#other factors not mentioned will stay the same
+#we can see that the rows for the new factors don't combine together, and that's because this tibble is created based on the grouping variables we first described. We would need to redo the tibble creation to make the factors actually collapse with one another. Do factor collapse before manipulating your data if you want to summarize/group by the new categories 
+```
+
+As we can see from the above chunks of code, `mutate()` has many roles. From creating new data columns, to renaming factors, to changing column names, as well as many we did not cover. The commonality with `mutate()` functions is that we specify the `mutate()` function first, provide a column of data we want to manipulate, and then specify another type of function. Our column can be a new column we make or it can be overwriting a column. 
+
+If you have multiple columns that you want to combine into one column, you can do that with the function pivot_longer. It is the opposite of pivot_wider.
+
+```{r pivot_longer}
+#Let's take all of the site columns we made using pivot_wider, and make them into a single column. Doing so will assign every site to each individual. The NAs mean that that individual was not in that site.
+
+obs3<-observations2 %>% #pipe straight away
+  select(-Total)%>% #remove the total column since we don't need to have that gathered in our dataset. Select with a minus sign in front of the column you don't want will deselect the column
+pivot_longer(names_to="Site", values_to="N", 2:7 ) #names_to is the new column you are making as the "names" or ID for whatever data you want, so we want to make site into one column. Values_to is the information from the multiple columns you want to combine. This value will be a new column with whatever name you give it. the numbers are the numbers of the columns you wish to combine together. Here we are taking all of the site columns we made whitch are columns 2 through 7. The : means "through"
+
+```
+
+We will now take our second break to practice manipulating data with `tidyr`, `forcats`, and `dplyr` functions. 
+
+
+------------------------------------------------------------------------
+
+# Exercise 2
+
+You will use the 2008-2018 North American Breeding Bird Survey data for
+Mexico along with the RouteData file containing environmental and route
+specific details of the survey to answer the following questions. You
+will use the tools we have covered so far within `tidyverse`. You will
+have approximately 30 minutes to complete the exercises and ask
+questions. If you finish early, explore the data on your own.
+
+Task 1: Merge the 2 datasets by the StateNumbers, Route, and RunDate
+variables.
+
+```{r Exercise 2 task 1}
+routedata<-read_csv("./RouteData.csv") #read in the dataset
+wild<-read_csv("./bird.csv")
+wild2<-inner_join(wild, routedata, by=c("StateNum", "Route", "RunDate")) #use a joining function to join the route data to the bird data by 3 different variables. Use c() to denote that we are joining by more than one variable
+
+```
+
+Task 2: Separate the RunDate column into Month, Day, and Year columns.
+
+```{r Exercise 2 task 2}
+wild2<-separate(wild2, RunDate, into=c("Month", "Day", "Year")) #use the separate function to split the column into 3 different columns titled MOnth, Day, and Year. It will automatically choose how to separate the columns based on a repeated separator which here was "/"
+
+```
+
+Task 3: Which species has the highest total number of sightings in the
+entire dataset and how many sightings are there? How many species have
+10 or fewer sightings?
+
+```{r Exercise 2 task 3}
+
+#Highest
+wild2 %>%
+  pivot_longer(names_to="Stop", values_to="N", 12:61)%>% #use pivot_longer to create two new variables called Stop and N. Stop will be the column titles from Stops 1-50 and N will be the cell values associated with those original columns. We are gathering columns 12 through 61 from the dataset because these were are Stops 1 through 50 columns
+  group_by(ScientificName) %>% #group by species
+  summarize(Sum=sum(N)) %>% #summarize to get the total number of sightings by species
+  arrange(desc(Sum)) #arrange in descending order so the highest number of sightings is at the top of the data output
+  
+#Zenaida macroura, 22,118
+
+
+#10 or fewer sightings
+spec<-wild2 %>% #save this as object "spec"
+  pivot_longer(names_to="Stop", values_to="N", 12:61)%>% #same process as above with gather, groupby and summarize
+  group_by(ScientificName) %>%
+  summarize(Sum=sum(N)) %>%
+  filter(Sum < 11) #this time we filter for anything less than 11 sightings (10 or fewer)
+
+nrow(spec) #take out object we named spec and determine the number of species/number of rows in this data where are the species that had 10 or fewer sightings
+
+# 139 species have 10 or fewer sightings
+
+```
+
+Task 4: Using only data where temperature was collected in Celsius,
+create a table of the total number of sightings for each genus in 2018
+by State. Separate the table so each state is in its own column and
+labeled as "State_x" where x is the number of the state in the dataset
+(e.g. State_6). Which state has the greatest number of Anas species
+sightings?
+
+Hint: Use functions filter, group_by, summarize, separate, pivot_longer,
+pivot_wider, rename
+
+```{r  Exercise 2 task 4}
+wild3<-wild2 %>%
+  filter(TempScale=="C" & Year==2018)%>% #filter for Celsius only and year 2018
+  separate(ScientificName, into= c("Genus", "species"))%>% #separate the scientific name column into two new columns calleed Genus and Species
+  pivot_longer(names_to=Site, values_to=N, 13:62)%>% #because we created two new columns, our column numbers have increased to 13 through 62
+  group_by(Genus, StateNum) %>%
+  summarize(Total=sum(N, na.rm=TRUE))%>% #groupby genus and state and then summarize to get the total number of sightings by genus and state
+  pivot_wider(names_from=StateNum, values_from=Total)%>% #use the pivot_wider function to spread out the states into sepearte columns and put in the cells under each column the total number of observations from the summarize function
+  rename(State_2=`2`, State_6=`6`, State_7=`7`, State_19=`19`, State_26=`26`, State_28=`28`)
+    #now rename the columns from just numbers which mean very little to State followed by the number so anyone can know we are referring to states here
+#greatest number
+
+  wild3 %>%
+    filter(Genus=="Anas")#filter the spread out tibble for Anas species to determine which state has the greatest number of anas counts
+  
+  #greatest State 26 with 87 individuals
+```
+
+------------------------------------------------------------------------
+
+# Visualization
+
+We will now move from simply manipulating the data to visualizing the
+data. We will work in `ggplot2` package to visualize our data.
+
+### Introduction
+
+`ggplot2` is a graphing package from the tidyverse. It is incredibly
+powerful for creating publication-quality graphics. `ggplot2` should
+basically be used at all times unless you're trying to do just quick
+graphing for basic visualization or mapping (use `spplot`, `Tmap`, or
+`Leaflet` for maps). There are numerous types of graphs you can create,
+and you can add onto your code easily to make the graphics more complex.
+You can even pipe (%>%) directly into `ggplot2`. However, instead of
+continuing with the pipe throughout, you switch to using `+` to add more
+code.
+
+### Basics
+
+`ggplot2` builds on code. So you keep code and if you want to add a
+legend, axis labels, colors, etc., you use a `+` and make a new code
+line. It reads nicely when you type everything out.
+
+The syntax for graphing in ggplot is to specify the dataset and
+variables from that dataset within the `ggplot()` function. No figure
+will be created with only the `ggplot()` function, a geometry for the
+plot must be specified in a second line of code. Geometries can be
+points, lines, histograms, bars, violins, boxes, etc. And you can have
+multiple geometries in one figure (e.g. lines and points).
+
+```{r basic plot}
+#load the ggplot2 package
+library(ggplot2)
+library(dplyr)
+library(readr)
+
+#reload the data
+fish<-read_csv("./2018 LTRM data.csv", col_types= list(weight =col_double(), fstation = col_factor()))
+fish<-filter(fish, fishcode!="LMBS" & fishcode !="WRMH") #remove the two species we aren't interested in
+
+#the geom command selects type of graph geom_point tells R to show the data as points. Graph weight and length
+ggplot(fish, aes(length, weight))+ #dataset, aes(x,y)
+  geom_point() #this means your geometry for the plot is points (you can have lines, boxplots, bars, columns, etc)
+
+plot(fish$length, fish$weight) #base R plotting. UGLY
+```
+
+------------------------------------------------------------------------
+NOTE: For purposes of this workshop it does not matter if the data is specified in the `ggplot()` function or in the `geom_x()` function as long as the dataframe is provided and the variables you are mapping are provided in the `aes()` argument. The code provided below will provide the same figure. When you delve into more complex figures, sometimes you may want to bring in data from multiple datasets. In this scenario, specifying the data in the `ggplot()` function tells the `geom_x()` function where to pull the data from while specifying the data in the `geom_x()` function will allow you to create different geometries using different datasets. 
+
+```{r ggplot or geom, eval=FALSE}
+ggplot(fish, aes(length, weight)) +
+  geom_point()
+
+ggplot()+
+  geom_point(data = fish, aes(length,weight))
+```
+
+### Background
+
+I personally hate the grey, lined background, so I use the following
+function to make the background blank. However, this code will apply to
+all figures in your R session that you produce. If you want a grey
+background for some figures, you do not need to run this code.
+Additionally, when working in RMarkdown, this line of code only applies
+to the code chunk where it was written.
+
+```{r global theme few, eval=FALSE}
+library(ggthemes) #for theme_set function
+theme_set(theme_few()) #makes background white, instead of gray. Must have ggthemes package loaded!
+```
+
+If you want to make the background change for only one graph, you can
+use the following code in a single plot. In using this code, you can
+make the background any color you want from hotpink to chartreuse.
+Notice that the grid lines are still apparent if you change to a color
+other than white (can also use `element_blank()`) unless you add in the
+panel grid code.
+
+```{r single plot theme few}
+ggplot(data=fish, mapping = aes(length, weight))+ 
+  geom_point() +
+  theme(panel.background = element_rect(fill="red"), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) #change the background color to red and get rid of grid lines
+```
+20 mins
+------------------------------------------------------------------------
+
+### Aesthetics
+
+We can alter essentially every aspect of a graph (color, shape, text
+size, point size, lines, legends, etc.). There are two ways we can
+manipulate the graph aspects: global and aesthetic (`aes`) parameters.
+Global parameters affect the entire plot uniformly, while aesthetics
+affect only the objects in the plot you are interested in manipulating
+with the code. Using `aes` (aesthetics) allows you to do a lot more
+interesting things with the data as well.
+
+Here, we will alter the plot's point's color, shape, and size using
+global parameters.
+
+```{r global}
+#any specifications in the aes command will be specific to that part of the plot, but everything outside of the aes statements will apply to all of the plot
+ggplot(data=fish,mapping = aes(length,weight))+ #data= and mapping = are not necessary to make the plot, but may help keep information more clear for your own sanity
+  geom_point(color="red", shape=2, size=1) #make the color of the points red, change the size and the shape
+```
+
+Here we changed the size, shape, and color of the points using global parameters which means that all of the points were equally affected. But what if we wanted to change the geometries by factor? For example, make the color of the points reflect another variable? 
+
+Next, we are going to change the color of the points based on the species. 
+
+```{r aesthetics 1}
+#any specifications in the aes command will be specific to that part of the plot, but everything outside of the aes statements will apply to all of the plot
+ggplot(data=fish,mapping = aes(length, weight))+ 
+  #make the color of the points change with species of fish
+  # within the geom_points command you can customize the points 
+#you can also use aes statements within the geom statements to pull in different parts of datasets into the same plot (for example, the fishcode factor)
+  geom_point(shape=2, size=3, aes(color=fishcode)) #notice how shape and size are outside of aesthetics, because they are still global parameters, so they will affect all of the points equally. But now color will change based on fishcode
+```
+
+The colors of our points change based on data for species. The species variable is a factor, which allows you to have discrete color categories. You can hand pick the colors used for the points too. We also see that `ggplot2` automatically made a legend. This legend can be altered in position, text, etc which we will do later. You can put any of the parameters in the aesthetics to change the data points. For examples, we could change the size, shape, or transparency (`alpha`) of the points based on clarity.
+
+
+```{r aesthetics 2}
+#any specifications in the aes command will be specific to that part of the plot, but everything outside of the aes statements will apply to all of the plot
+ggplot(data=fish,mapping = aes(length, weight))+ 
+  #make the color AND shape of the points change with species of fish
+  geom_point(size=3, aes(color=fishcode, shape=fishcode)) #notice how size is outside of aesthetics, because it is still a global parameter, so it will affect all of the points equally. But now color AND shape will change based on the species
+```
+
+
+
+### Stats
+
+Some of the geometries within `ggplot2` automatically create the stats needed for the figure. For example, the fish dataset does not contain count data, but we can still make a barplot. We don't need to calculate the `nobs()` ourselves before plotting, because using the `stat_count()` automatically does this for us. 
+
+```{r barplot count}
+ggplot(fish, aes(fishcode))+ #notice we only have one FACTOR variable within aes
+  stat_count() #specify stat_count rather than a geometry
+```
+
+You can change these stats if you want them to show the data a different way as well, perhaps proportion is what you want to display. Notice we now use the `geom_bar` rather than `stat_count`.  
+
+```{r barplot prop}
+ggplot(fish, aes(fishcode))+ #again, we only have one FACTOR variable within aes
+  geom_bar(aes(fishcode, ..prop.., group=1)) #use geom_bar with the aes ..prop.. to create a proportional barplot, fishcode is the x variable, ..prop.. to get proportions, group=1 because we want the bars to represent the proportion of all fish in the data
+```
+
+Histograms automatically count data along a continuous variable. It automatically creates a bin width size for your data to be counted in. For example, 10 mm size classes. 
+
+```{r histogram}
+ggplot(fish, aes(length))+ #specify only one CONTINUOUS variable
+  geom_histogram()
+```
+
+You can change binwidth for your histograms which smooth the data or make it blockier. Here we will create a binwidth of 10 so each 10 mm size class is counted in the data. 
+
+```{r binwidth}
+ggplot(fish, aes(length))+
+  geom_histogram(binwidth = 10) #Add binwidth argument
+```
+
+Boxplots automatically create quantiles and outliers of your data in the visualization. The box represents the median and 25th and 75th quantiles and the whiskers are 5th and 95th quantiles with the dots being outliers. 
+
+```{r boxplot}
+ggplot(fish, aes(fishcode, length))+ #here we have two variables. One must be a factor and the other on a continuous scale
+  geom_boxplot() #specify the boxplot geometry
+```
+
+---
+
+
+### Position
+
+You can arrange the position of your data in multiple ways. For
+barplots, this is really handy for comparing data.
+
+For barplots you have 3 main positions:
+
+-   identity- overlapping, all raw count data/number of observations
+    start on x-axis
+-   stack-stacked raw count data
+-   fill- stacked proportion
+-   dodge- side by side raw count data
+
+```{r identity}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="identity") #stacked data of raw counts, data are not visible because they overlap bars
+```
+
+```{r stack}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="fill") #stacked data of proportions
+```
+
+```{r fill}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="fill") #stacked data of proportions
+```
+
+```{r dodge}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge") #side by side raw counts, this one is the most readily comparable
+```
+
+
+---
+
+### Basic Themes
+
+Now that we can put data into plots and customize the points and lines,
+let's customize the rest of the plot. The argument `theme` allows you to
+customize the appearance of many aspects of the plot including legends
+and titles. `theme` is it's own function and you add more arguments to
+`theme` by using commas. Here, we will start with some basic text themes
+and add labels to the figure.
+
+```{r basic themes}
+fish$fstation<-as.factor(fish$fstation) #coerce the fstation variable into a factor permanently
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge")+ #dodge for side-by-side comparison
+  ylab("Count")+ #add a y-axis title
+  xlab("Species")+ #add a x-axis title
+  ggtitle("Fish Collections across Field Stations")+ #add a plot title
+theme(
+    axis.title.x = element_text(size=16, face="bold"),#make x axis title bold and size 16
+    axis.title.y = element_text(size =16, face="bold"),#make y axis title bold and size 16
+    plot.title = element_text(size=18, face="bold", hjust=0.5), #make plot title bold, size 18, and horizontally adjust to center of figure
+    axis.text = element_text(size=10, color="black")#change text on axes to be size 10 and black rather than the default grey 
+    )
+```
+
+We will now take a break to complete exercises using basic `ggplot2`
+functions.
+
+------------------------------------------------------------------------
+
+# Exercise 3
+
+We will use `ggplot2` to create basic visualizations with the bird count
+data.
+
+```{r Exercise 3 read in data}
+wild<-read_csv("./bird.csv")
+```
+
+Task 1: Create a boxplot of the starting temperature by State for
+temperatures only in degrees C. Hint: you may need to coerce state
+number to a different variable class.
+
+Do any of the data points stand out? Remove any outlandish data points
+and plot again.
+
+```{r Exercise 3 task 1}
+wild2%>%
+  filter(TempScale=="C")%>% #filter for only degrees celsius
+ggplot(aes(as.factor(StateNum), StartTemp))+ #use as factor to make State a factor rather than a number, otherwise only one awful boxplot will be created. Plot State number on the x-axis and starting temperature on the y-axis
+  geom_boxplot()#use the boxplot geometry
+
+wild2%>%
+  filter(TempScale=="C" & StartTemp < 200)%>% #repeat the code but this time filter out the extreme temperature outlier
+ggplot(aes(as.factor(StateNum), StartTemp))+
+  geom_boxplot()
+```
+
+Task 2: Using the vetted temperature data from the last task, create a
+scatterplot of the Starting and Ending Temperatures. Change the color of
+the points using global parameters and the shape of the points using
+aesthetic parameters.
+
+```{r Exercise 3 task 2}
+wild2%>%
+  filter(TempScale=="C" & StartTemp < 200)%>% #filter for Celsius and remove outliers
+ggplot(aes(StartTemp, EndTemp))+ #plotting starting and ending temperatures for each site
+  geom_point(color="blue", aes(shape=as.factor(StateNum))) #color the points using global color outside of "aes", and change the shape of the points using aes(shape)
+```
+
+Task 3: Create a barchart of the number of sightings by species for all
+counts greater than 0 within State 7, route 17, stop 48. Hint: You will
+need to use dplyr functions to summarize the data before plotting and
+use stat="identity".
+
+```{r Exercise 3 task 3}
+(state7<-wild %>%
+  filter(StateNum==7 & Route==17)%>% #filter for state 7 and route 17
+  group_by(ScientificName) %>%
+  summarize(Count=sum(Stop48))%>% #group by species and summarize to get the total counts for stop 48
+  filter(Count > 0)%>% #filter to remove 0s from the count data since we don't want to plot 0s
+ggplot(aes(ScientificName, Count))+ #plot the species on the x-axis and count data on the y axis
+  geom_bar(stat="identity")) #make a bar chart and use stat=identity becuase we have the exact numbers we need from using group by and summarize. 
+```
+
+Task 4: Using the same plot as Task 3, change the x and y axes titles,
+create a plot title, and change the basic text themes (color, size,
+face) for the x and y axes and the title.
+
+```{r Exercise 3 task 4}
+(state7<-wild %>%
+  filter(StateNum==7 & Route==17)%>%
+  group_by(ScientificName) %>%
+  summarize(Count=sum(Stop48))%>%
+  filter(Count > 0)%>%
+ggplot(aes(ScientificName, Count))+
+  geom_bar(stat="identity")+
+  xlab("Scientific Name")+ #change x-axis title
+  ylab("Number of Sightings")+ #change y-axis title
+  ggtitle("Bird Sightings in State 7")+ #give the plot a title
+  theme(axis.title=element_text(size=15, face="bold"), #change axis titles to be size 15 and bold
+         plot.title=element_text(size=18, face="bold", hjust=0.5), #change the plot title to be size 18 and bold and adjust to the center of the figure. The default is for the title to start on the left side 
+        axis.text=element_text(size=10, color="black"))) #change axis text to be size 10 and black rather than the default grey
+
+
+```
+
+------------------------------------------------------------------------
+
+# Advancing GGplot2 Toward Publication Quality Figures
+
+We will continue using `ggplot2` to discuss several aspects of figure
+aesthetics that can be implemented toward creating publication quality
+figures.
+
+### Color
+
+Color is a major component of visualizing data. Color choices matter
+greatly to correctly visualize your data and make the data
+understandable for the reader/interpreter. There are many plots that
+incorrectly show data because of the choice of color. We have looked a
+little bit at color previously by changing the color of points based on
+aesthetic and global parameters as well as a factor. However, we did not
+discuss the families of colors or how to select different colors.
+Before, R automatically chose a color palette to fill in the bars, but
+we can also select the colors we want.
+
+Some fundamentals of color choices:
+
+1.  If you have a continuous scale of data where the data is
+    unidirectional, perhaps precipitation from 0 to 100mm, you want to
+    show the data as one color family on a figure. Here, the values of
+    the data closest to 0 should be a lighter (or darker) shade of the
+    color and the values of the data closest to 100 should be a darker
+    (or lighter) shade of the color.
+
+2.  If you have a continuous scale of data where the data is
+    multidirectional, maybe you have negative and positive values with 0
+    as the center, you want to show the data as similar color families
+    but with two different hues. One hue would be for negative values
+    and one would be for positive values.
+
+3.  If you have related factor data, maybe low, medium, and high values,
+    you want to show the data as one color family. Choose a lighter
+    shade for low, medium shade for medium, and darker shade for high.
+
+4.  If you have unrelated factor data, maybe different habitats wildlife
+    were located in, you want to show the data as multiple color
+    families. However! these colors should not clash to create a very
+    ugly figure.
+
+You should always keep in mind colorblindness when selecting colors as
+well. NEVER put red and green on the same figure if you can help it. The
+R Color Brewer and online color selectors can help you with
+colorblind-friendly color palettes.
+
+We can select colors by naming palettes, naming individual colors,
+creating palettes using hex codes (#000000), or using R color brewer.
+See more information
+[here](http://www.sthda.com/english/wiki/colors-in-r) or
+[here](https://bookdown.org/rdpeng/exdata/plotting-and-color-in-r.html).
+
+Our first example with color looks at the outline vs fill different
+figures. Fill is the color within the chart type while color is the
+color of the line around the chart type. So, for barcharts you have fill
+which is coloring the bar and color which is the line around the bar
+
+```{r outline vs fill}
+ggplot(fish, aes(fishcode, fill=fstation))+
+ geom_bar(color="black", size=1, fill="grey40", position="dodge") #color is the line around the bar, fill is coloring in the bar, size changes the width of the line around the bar
+
+```
+
+The same fill and color principles can be applied to boxplots and other
+types of plots as well such as scatter if there are open points which
+are shape numbers 21-25.
+
+```{r fill boxplot}
+ggplot(fish, aes(fishcode, weight))+
+  geom_boxplot(color="black", fill="grey40") #change colors for the color (line) argument and the fill argument
+```
+
+```{r fill scatter}
+ggplot(fish, aes(length, weight))+
+ geom_point(color="black", shape=25, size=4, stroke=2, fill="blue") #color is the line around the shape, fill is coloring in the shape, size changes the shape size, stroke changes the shape outline size. Fill can only be used with shape numbers 21-25 which are open shapes
+```
+
+Let's look at changing color schemes in R.
+
+You can create your own palettes using R Color Brewer package. The
+following is a very basic example of selecting one of the color
+palettes. You can manually include hexidecimal numbers to create your
+own palette as well.
+
+```{r R color brewer}
+#install.packages("RColorBrewer")
+library(RColorBrewer)
+display.brewer.all() #this gives you all the palettes in R Color Brewer
+pal1<-brewer.pal(6, "YlOrRd") #this function in R color brewer allows you to choose the number of colors from the palette and which palette you want 
+pal1 #returns the colors in their hexadecimal codes
+```
+
+Now we will look at changing some of the colors in our plots.
+
+```{r example palette}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge")+
+scale_fill_brewer(palette="Dark2") #make sure the color palette is in quotation marks
+```
+
+```{r creating color scales-grayscale}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge")+
+  scale_fill_grey() #using grayscale to fill bars
+```
+
+Here we made each fstation a different shade of grey using
+`scale_fill_grey()`. These values go from light to dark and are the same
+color family, so this color scheme is appropriate for related factor
+data, but maybe not appropriate for separate entities like field
+stations.
+
+```{r creating color scales brewer blues}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge")+
+  scale_fill_brewer(type="seq", palette="Blues", direction=1, aesthetics="fill") #use the scale fill from R color brewer. The type here is sequential, so we have one direction of related values for fstation We choose the palette we want, the aesthetics is fill because we are filling the bars. Direction 1 is regular order, direction -1 is reverse order 
+```
+
+Again, these blues as they are in sequence, might not be appropriate for
+discrete factor data.
+
+```{r scale fill manual with hexadecimals}
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge")+
+scale_fill_manual(values=c("#beaed4","#fdc086","#ffff99", "#386cb0", "#bdbdbd", "#7fc97f")) #create a set of hexadecimal color values hand picked outside of a set palette, specify the codes using the values argument
+```
+
+Here, these colors differ from one another and are not related, so they
+are appropriate but maybe not the most pleasant looking for discrete
+factor data.
+
+------------------------------------------------------------------------
+
+### Advanced Themes
+
+We will continue with the idea of themes now to look at angling axis
+text, altering legends, axis limits, and hanging axes. We will use the
+code from the previous module's basic themes code chunk and add onto it.
+
+```{r advanced themes}
+# we will add onto our code from the previous basic themes code chunk
+fish$fstation<-as.factor(fish$fstation)
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge", color="black")+ #add black outline around bars
+  scale_fill_manual(values=c("#beaed4","#fdc086","#ffff99", "#386cb0", "#bdbdbd", "#7fc97f"))+ #change colors to manual discrete
+  ylab("Count")+
+  xlab("Species")+
+  ggtitle("Fish Collections across Field Stations")+
+  scale_y_continuous(limits=c(0,400), breaks=seq(0,400,50))+ #change the y-axis scale limits to go from 0 to 400, make tick marks starting at 0 and ending at 400 and a new tick mark and number every 50. Limits and breaks do not need to match
+  labs(fill="Field Station")+ #change legend title based on the aesthetic used previously. We use fill for fstation in the ggplot function, so here, labs is based on the "fill" aesthetic
+theme(
+    panel.background = element_blank(),#make plot background white if not already
+    axis.title.x = element_text(size=16, face="bold"),
+    axis.title.y = element_text(size =16, face="bold"),
+    plot.title = element_text(size=18, face="bold", hjust=0.5), 
+    axis.text = element_text(size=10, color="black"), 
+    axis.text.x=element_text(angle=45), #angle the x-axis text 45 degrees so the labels fit better
+    legend.text = element_text(size=8), #adjust the legend text size
+    legend.title = element_text(size=12), #adjust the legend title size
+    legend.position= "right" #position the legend to the left of the graph
+    )
+
+```
+
+Let's make a few other adjustments including changing the text in the
+legend and adding an x-axis line.
+
+```{r}
+fish$fstation<-as.factor(fish$fstation)
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge", color="black")+
+  scale_fill_manual(label=c("Pool 4", "Pool 8", "Pool 13", "Pool 26", "Open River", "La Grange"), # change the labels of the legend in the order they are printed
+                    values=c("#beaed4","#fdc086","#ffff99", "#386cb0", "#bdbdbd", "#7fc97f"))+
+  ylab("Count")+
+  xlab("Species")+
+  ggtitle("Fish Collections across Field Stations")+
+  scale_y_continuous(limits=c(0,400), breaks=seq(0,400,50))+ 
+  labs(fill="Field Station")+ 
+theme(
+    panel.background = element_blank(),
+    axis.title.x = element_text(size=16, face="bold"),
+    axis.title.y = element_text(size =16, face="bold"),
+    plot.title = element_text(size=18, face="bold", hjust=0.5), 
+    axis.text = element_text(size=10, color="black"), 
+    axis.text.x=element_text(angle=45), 
+    legend.text = element_text(size=8), 
+    legend.title = element_text(size=12), 
+    legend.position= "right", 
+    axis.line=element_line()# added the x-axis line for visualization guides. You can change thickness and color as well
+    )
+```
+
+Look at that disgusting gap between the origin (0,0) and the x-axis line
+as well as the text running into the x-axis line
+
+```{r}
+fish$fstation<-as.factor(fish$fstation)
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge", color="black")+
+  scale_fill_manual(label=c("Pool 4", "Pool 8", "Pool 13", "Pool 26", "Open River", "La Grange"), 
+                    values=c("#beaed4","#fdc086","#ffff99", "#386cb0", "#bdbdbd", "#7fc97f"))+
+  ylab("Count")+
+  xlab("Species")+
+  ggtitle("Fish Collections across Field Stations")+
+  scale_y_continuous(limits=c(0,400), breaks=seq(0,400,50), expand=c(0,0))+ #add expand function to remove the disgusting gap between the x-axis and the 0 on the y-axis
+  labs(fill="Field Station")+ 
+theme(
+    panel.background = element_blank(),
+    axis.title.x = element_text(size=16, face="bold"),
+    axis.title.y = element_text(size =16, face="bold"),
+    plot.title = element_text(size=18, face="bold", hjust=0.5), 
+    axis.text = element_text(size=10, color="black"), 
+    axis.text.x=element_text(angle=45, vjust=.5), #adjust the vertical distribution of the x-axis text This is based on placement with the x-axis title, so the text should be below the x-axis line but above the title. 
+    legend.text = element_text(size=8), 
+    legend.title = element_text(size=12), 
+    legend.position= "right", 
+    axis.line=element_line()
+    )
+```
+
+------------------------------------------------------------------------
+
+### Faceting
+
+You can facet figures which means it pulls apart the data in the figures
+based on some sort of factor. In these types of figures, comparison can
+be easier. We will use an example of faceting the bar plots by field
+station.
+
+```{r facet graph}
+ggplot(fish, aes(fishcode))+
+  geom_bar(position="dodge", color="black")+
+  ylab("Count")+
+  xlab("Species")+
+  ggtitle("Fish Collections across Field Stations")+
+  scale_y_continuous(limits=c(0,400), breaks=seq(0,400,50), expand=c(0,0))+
+  labs(fill="Field Station")+ 
+theme(
+    panel.background = element_blank(),
+    axis.title.x = element_text(size=16, face="bold"),
+    axis.title.y = element_text(size =16, face="bold"),
+    plot.title = element_text(size=18, face="bold", hjust=0.5), 
+    axis.text = element_text(size=10, color="black"), 
+    axis.text.x=element_text(angle=90, vjust=.5), 
+    legend.text = element_text(size=8), 
+    legend.title = element_text(size=12), 
+    legend.position= "right", 
+    axis.line=element_line()
+    )+
+  facet_grid(. ~ fstation) + #add a facet graph, . ~ fstation will facet across the x-axis while fstation . ~ will facet across the y-axis
+  theme(strip.text = element_text(face="bold", size=10), #change the text that labels the facets
+        strip.background = element_rect(fill="white", color="black")) #change the box fill to white and the outline color to black of the boxes at the top of the figure
+```
+
+------------------------------------------------------------------------
+
+### Factor Reordering
+
+GGplot automatically plots everything based on factors in alphabetical
+order. However, alphabetical order does not always make sense, so to
+combat, this issue you can use a factor reorder to plot based on logical
+sense.
+
+```{r}
+fish$fishcode<-factor(fish$fishcode, levels=c("ERSN", "GZSD", "BHMW", "BLGL", "FWDM", "CNCF")) #arrange these factors based on trophic level logical order
+
+ggplot(fish, aes(fishcode, fill=fstation))+
+  geom_bar(position="dodge", color="black")+
+  scale_fill_manual(label=c("Pool 4", "Pool 8", "Pool 13", "Pool 26", "Open River", "La Grange"), 
+                    values=c("#beaed4","#fdc086","#ffff99", "#386cb0", "#bdbdbd", "#7fc97f"))+
+  ylab("Count")+
+  xlab("Species")+
+  ggtitle("Fish Collections across Field Stations")+
+  scale_y_continuous(limits=c(0,400), breaks=seq(0,400,50), expand=c(0,0))+
+  labs(fill="Field Station")+ 
+theme(
+    panel.background = element_blank(),
+    axis.title.x = element_text(size=16, face="bold"),
+    axis.title.y = element_text(size =16, face="bold"),
+    plot.title = element_text(size=18, face="bold", hjust=0.5), 
+    axis.text = element_text(size=10, color="black"), 
+    axis.text.x=element_text(angle=45, vjust=.5), 
+    legend.text = element_text(size=8), 
+    legend.title = element_text(size=12), 
+    legend.position= "right", 
+    axis.line=element_line()
+    )
+```
+
+We will now take a final break to complete exercises associated with
+advanced techniques using `ggplot2`.
+
+------------------------------------------------------------------------
+
+Exercise 4
+
+This is our final exercise that will combine all of the information
+learned today. We again are using the bird count dataset.
+
+Task 1: Using the vetted temperature data from Exercise 3 task 1 and 2, create a scatterplot of Starting and Ending temperatures faceted by state. Make the shape a global parameter to equal 22. Use color and fill to make the point shape different colors. 
+
+```{r Exercise 4 Task 1}
+#use saved data from exercise 3 task 1 and 2 (temperature)
+wild<-read_csv("./RouteData.csv")
+wild2<-wild%>%
+  filter(TempScale=="C" & StartTemp < 200)#filter for Celsius and remove outliers
+
+#plot stating and ending temperatures (scatterplot), shape 22, color and fill of shape different colors
+
+#color the points using global color outside of "aes", and change the shape of the points using aes(shape)
+ggplot(wild2, aes(StartTemp, EndTemp))+ #plotting starting and ending temperatures for each site
+  geom_point(shape=22, color="blue", fill="black")+ #color the points using global color outside of "aes", and change the shape of the points using aes(shape)
+
+  #facet by state
+  facet_grid(StateNum ~ .)
+```
+
+Task 2: Using the figure you created in Task 1, change the aesthetics (text, axis gap, legend, colors, etc.) to look appropriate and ready for publication. 
+
+```{r Exercise 4 Task 2}
+#copy figure code from Task 1
+ggplot(wild2, aes(StartTemp, EndTemp))+ 
+  geom_point(shape=22, color="black", fill="grey40")+ #are colors appropriate for the data type? If not, change
+#remove axis gap 
+scale_y_continuous(expand=c(0,0))+ #add expand function to remove the disgusting gap between the x-axis and the 0 on the y-axis
+  
+#change text themes
+theme(
+    panel.background = element_rect(color="black"), #remove grey, lined background while keeping bounding box lines of faceted figures
+    axis.title.x = element_text(size=16, face="bold"),#change x-axis title aesthetics
+    axis.title.y = element_text(size =16, face="bold"),#change y-axis title aesthetics
+    axis.text = element_text(size=10, color="black"), #change axis text aesthetics
+    axis.line=element_line()  #add an x-axis line
+    )+
+  xlab("Starting Temperature (C)")+ #change x-axis title name
+  ylab("Ending Temperature (C)")+ #change y-axis title name
+  facet_grid(StateNum ~ .)+ #add a facet graph
+  theme(strip.text = element_text(face="bold", size=10), #change the text that labels the facets
+        strip.background = element_rect(fill="white", color="black"))#change the box fill to white and the outline color to black of the boxes at the top of the figure
+
+
+
+
+
+```
+
+
+Task 3 Challenge 1: Create a boxplot of non-zero abundances from all stops for the
+species in the Aphelocoma genus. Remove any outlandish numbers (extreme
+outliers). Change themes and aesthetics to make it look publication
+quality.
+
+```{r Exercise 4 task 3 Challenge 1}
+wild<-read_csv("./bird.csv")
+wild %>%
+  separate(ScientificName, into=c("Genus", "Species")) %>% #separate the Scientific name column into two columns called Genus and Species. Will automatically split the scientific name based on the space between the words
+  filter(Genus=="Aphelocoma")%>% #filter for the Aphelocoma genus
+  pivot_longer(names_to=Site, values_to=N, 11:60) %>% #gather the stop counts from stops 1 through 50
+  filter(N < 60 & N > 0) %>% #remove outliers in this data set (this was done after first graphing the data) and remove 0s
+  ggplot(aes(Species, N))+ #plot Species on the x-axis and N which is the column created by the pivot_longer function on the y-axis
+  geom_boxplot(color="black", size=.75)+ #use the boxplot geometry. Make the outlines black and thiccer (.75) than the default
+  ylab("Number of Sightings")+ #label the y-axis
+  xlab("Aphelocoma Species")+ #label the x-axis
+  scale_y_continuous(limits=c(0,20), breaks=seq(0,20,5), expand=c(0,0))+ #limit the y-axis from 0 to 20 and make tick marks every 5. Remove the space between the 0,0 and the x-axis
+  theme(axis.title=element_text(size=15, face="bold"), #change text sizes and faces
+        axis.text=element_text(size=12),
+        axis.text.x=element_text(angle=0, vjust=0.5),#adjust the x=axis text
+        panel.background = element_blank(), #remove anything in the background
+        axis.line=element_line()#add in an axis line
+        )
+
+```
+
+Task 4 Challenge 2: Plot the total number of observations for species within the
+Sayornis genera by state. Manipulate themes and aesthetics to look
+publication quality. Change the fill of the bars to vary by species and
+facet by state.
+
+Hint: Use stat = identity for a bar chart
+
+```{r Exercise 4 task 4 Challenge 2}
+wild %>%
+  separate(ScientificName, into=c("Genus", "Species")) %>% #same as previous code chunk
+  filter(Genus=="Sayornis")%>% #filter for Sayornis species
+  pivot_longer(names_to=Site, values_to=N, 11:60) %>% #same pivot_longer function as previous
+  group_by(Species, StateNum)%>% # groupby and summarize to get total number of species by state
+  summarize(TotalNum=sum(N))%>%
+  
+  ggplot(aes(Species, TotalNum))+ #plot species and Total number
+  geom_bar(stat="identity", color="black", size=.5, aes(fill=Species))+ #use a barchart to plot means! #use stat = identity because we already have the numbers we need from the groupby-summarize combo. Create black lines around the bars and fill them with different colors by species
+  ylab("Number of Sightings")+ #label the axes
+  xlab("Sayornis Species")+
+  scale_fill_manual(values=c("grey40","grey60","black"))+ #change the color scale from the default to different gray scale colors
+  scale_y_continuous(limits=c(0,500), breaks=seq(0,500,50), expand=c(0,0))+ #make the y-axis limits to 500 and break (create tick marks) every 50 counts, remove the gap between the origin (0,0) and the x-axis
+  theme(axis.title=element_text(size=15, face="bold"), #change text size and faces
+        axis.text=element_text(size=12),
+        axis.text.x=element_text(angle=90, vjust=0.5), #angle the text so the species names don't run together
+        panel.background = element_blank(), 
+        axis.line=element_line() #notice the axis line breaks when faceting, because the facet grid just puts multiple graphs side by side
+        )+
+facet_grid(. ~ StateNum) + #add a facet graph
+  theme(strip.text = element_text(face="bold", size=10), #change the text that labels the facets
+        strip.background = element_rect(fill="white", color="black")) #change the box fill to white and the outline color to black
+
+```
+
+------------------------------------------------------------------------
+
+# Supplementary Material
+
+### AFS Style Guidelines
+
+These style guidelines are based on Glassic et al.'s 2019 paper titled
+"Creating Figures in R that Meet the AFS Style Guide: Standardization
+and Supporting Script" in Fisheries. We discussed most of the
+information in this script, and we will not discuss the following script
+as it is just here for you reference if you would like to attempt
+standardizing figures for AFS style guidelines. The code does not
+explain when to use its suggestions or why.
+
+```{r Glassic et al 2019 code}
+#load ggplot2 and other useful packages 
+library(tidyverse)
+
+#load package for combining figures 
+library(gridExtra)
+
+#generate length and weight data for Channel Catfish and Largemouth Bass, and put in dataframe
+length <- seq(from = 200, to = 500, by = 10) 
+
+species <- c(rep("lmb", 31), rep("cat", 31))
+
+a_lmb <- (-5.528) 
+b_lmb <- (3.273)
+a_cat <- (-5.800) 
+b_cat <- (3.294)
+weight_lmb <- 10^(a_lmb + b_lmb * log10(length)) 
+weight_cat <- 10^(a_cat + b_cat * log10(length)) 
+weight <- c(weight_lmb, weight_cat)
+length_weight_data <- data.frame(species, length, weight) 
+#make default ggplot figure with a legend and annotated label
+len_wt_default <- ggplot(data = length_weight_data, aes(x = length, y = weight, fill = species)) + 
+geom_point() + 
+labs(title = "A") 
+#view the plot, will appear in R plotting window 
+len_wt_default 
+
+
+#make ggplot figure that meets AFS style guidelines
+len_wt_afs <- ggplot(data = length_weight_data, aes(x = length, y = weight, fill = species)) + 
+#set symbol shape and size 
+geom_point(shape = 21, size = 2) + 
+#set the limits and tick breaks for the y-axis
+scale_y_continuous (limits = c(0,2400), expand = c(0,0), breaks = seq(0,2400,400)) + 
+#set the limits and tick spacing for the x-axis
+scale_x_continuous(limits = c(100,600), expand = c(0,0), breaks = seq(100,600,100)) + 
+#adjust the order of the legend, make new labels, and select the symbol colors 
+scale_fill_manual(limits = c("lmb", "cat"), labels = c("Largemouth Bass", "Channel Catfish"), values = c("black", "white")) +
+#add B to figure 
+ggtitle ("B") + 
+#label the y-axis 
+ylab("Weight (g)") + 
+#label the x-axis 
+xlab("Length (mm)") + 
+#add legend title, but left blank here because we want a legend but no title 
+labs(fill = "") + 
+#makes the figure background white without grid lines 
+theme_classic() + 
+#below are theme settings that provide unlimited control of your figure and can be a template for other figures 
+#set the size, spacing, and color for the y-axis and x-axis titles
+theme (axis.title.y = element_text(size = 14, margin = margin(t = 0, r = 10, b = 0, l = 0), colour = "black"), 
+       axis.title.x = element_text(size = 14, margin = margin(t = 10, r = 0, b = 0, l = 0), colour = "black"), 
+       #set the font type
+       text = element_text(family = "Times New Roman"), 
+       #modify plot title, the B in this case
+       plot.title = element_text(face = "bold", family = "Arial"), 
+       #position the legend on the figure 
+       legend.position = c(0.3,0.85), 
+       #adjust size of text for legend 
+       legend.text = element_text(size = 12), 
+       #margin for the plot
+       plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"), 
+       #set size of the tick marks for y-axis 
+       axis.ticks.y = element_line(size = 0.5), 
+       #set size of the tick marks for x-axis 
+       axis.ticks.x = element_line(size = 0.5), 
+       #adjust length of the tick marks 
+       axis.ticks.length = unit(0.2,"cm"), 
+       #set size and location of the tick labels for the y axis
+       axis.text.y = element_text(colour = "black", size = 14, angle = 0, vjust = 0.5, hjust = 1, 
+                                  margin = margin(t = 0, r = 5, b = 0, l = 0)), 
+       #set size and location of the tick labels for the x axis
+       axis.text.x = element_text(colour = "black", size = 14, angle = 0, vjust = 0, hjust = 0.5, 
+                                  margin = margin(t = 5, r = 0, b = 0, l = 0)), 
+       #set the axis size, color, and end shape
+       axis.line = element_line(colour = "black", size = 0.5, lineend = "square")) 
+#view the plot, will appear in R plotting window 
+len_wt_afs 
+#arrange the two plots side by side using the gridExtra package 
+ggplot_figure <- grid.arrange(len_wt_default, len_wt_afs, ncol = 2) 
+#save the plot as a .tiff as a very large file, which is publication quality
+ggsave(ggplot_figure, file = "ggplot_figure.tiff", width = 20.32, height = 7.62, units = "cm", dpi = 300)
+```

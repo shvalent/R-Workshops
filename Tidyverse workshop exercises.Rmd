@@ -1,0 +1,308 @@
+---
+title: "Tidyverse Workshop Exercises"
+author: "S.A. Valentine"
+date: "1/25/2022"
+output: html_document
+---
+
+# Exercise 1
+
+You will use the 2008-2018 North American Breeding Bird Survey data for Mexico to answer the following questions. You will use the tools we have covered so far within `dplyr` and will have approximately 30 minutes to complete the exercises and ask questions. If you finish early, explore the data on your own, walk around, etc.  
+
+Task 1: Read in data. How many columns and rows are there? 
+
+```{r exercise 1 task 1}
+#read_csv
+```
+
+
+Task 2: How many species are in the dataset?
+
+```{r exercise 1 task 2}
+#unique function
+
+```
+
+
+Task 3: How many different species were observed at State 6 in route 15?
+
+```{r exercise 1 task 3}
+#filter by state and route
+
+#unique 
+```
+
+
+Task 4: What is the total number of sightings of each bird species at Stop 2 for State 2 along route 4 (i.e. across all years)? Which species has the greatest number of sightings here? Which species have 2 sightings here? How many species have never been sighted at this stop? 
+
+```{r exercise 1 task 4}
+#filter by state and route
+
+#group by species
+
+#summarize total number of sightings of Stop 2
+
+
+#greatest number: arrange
+
+
+#2 sightings: filter
+
+
+#never sighted: filter
+
+```
+
+
+Task 5: What proportion of the total sightings in State 6 route 59 stop 5 were Phainopepla nitens? What species has the greatest proportion of sightings at this stop and what is that proportion? 
+
+```{r exercise 1 task 5}
+
+#save this dplyr data as a new object
+
+#filter state and route
+
+#group by species
+
+#summarize number of sightings by Stop 5
+
+#mutate to get proportion of sightings using the sum for each species
+
+
+
+#Phainopepla: filter 
+
+
+#greates proportion: arrange
+```
+
+----
+
+
+# Exercise 2
+
+You will use the 2008-2018 North American Breeding Bird Survey data for Mexico along with the RouteData file containing environmental and route specific details of the survey to answer the following questions. You will use the tools we have covered so far within `tidyverse`. You will have approximately 30 minutes to complete the exercises and ask questions. If you finish early, explore the data on your own.
+
+Task 1: Join the 2 datasets by the StateNumbers, Route, and RunDate variables.
+
+```{r Exercise 2 task 1}
+#use a join function, use c() around multiple column names when joining them
+```
+
+
+Task 2: Separate the RunDate column into Month, Day, and Year columns.
+
+```{r Exercise 2 task 2}
+#separate 
+```
+
+
+Task 3: Which species has the highest total number of sightings in the entire dataset and how many sightings are there? How many species have 10 or fewer sightings?
+
+```{r Exercise 2 task 3}
+#gather all stop columns
+
+#group by species
+
+#summarize sightings (of the new column that was gathered)
+
+
+#highest sightings: arrange
+
+#10 or fewer sightings: filter
+
+```
+
+
+Task 4: Using only data where temperature was collected in Celsius, create a table of the total number of sightings for each genus in 2018 by State. Separate the table so each state is in its own column and labeled as "State_x" where x is the number of the state in the dataset (e.g. State_6). Which state has the greatest number of Anas species sightings? 
+
+Hint: Use functions filter, group_by, summarize, separate, gather, spread, rename
+
+```{r  Exercise 2 task 4}
+#filter for Celsius and year
+
+#separate ScientificName to get genus and species
+
+#gather all stops
+
+#group by genus and state number
+
+#summarize to get total number of sightings
+
+#spread by state Number
+
+#rename columns
+
+#filter for Anas
+
+```
+
+---
+# Exercise 3
+
+We will use `ggplot2` to create basic visualizations with the bird count data. 
+
+```{r Exercise 3 read in data}
+#read in data
+```
+
+
+Task 1: Create a boxplot of the starting temperature by State for temperatures only in degrees C. 
+Hint: you may need to coerce state number to a different variable class. 
+
+Do any of the data points stand out? Remove any outlandish data points and plot again. 
+
+```{r Exercise 3 task 1}
+#filter for Celsius 
+
+#plot temperature by state, coerce state to factor. Factors always on x-axis
+
+#boxplot geometry
+
+
+#use filter to remove outlandish datapoints in temperature
+
+#replot
+```
+
+Task 2: Using the vetted temperature data from the last task, create a scatterplot of the Starting and Ending Temperatures. Change the color of the points using global parameters and the shape of the points using aesthetic parameters. 
+
+```{r Exercise 3 task 2}
+#use same saved data from last task (where the outlandish data points were removed)
+
+#plot starting and ending temperatures
+
+#point geometry: global color, aesthetic shape
+
+
+```
+
+Task 3: Create a barchart of the number of sightings by species for all counts greater than 0 within State 7, route 17, stop 48. 
+Hint: You will need to use dplyr functions to summarize the data before plotting and use stat="identity". 
+
+```{r Exercise 3 task 3}
+#filter for state and route
+
+#group by species
+
+#summarize (sum) by stop 48
+
+#filter for counts greater than 0
+
+#barchart geometry using stat="identity"
+```
+
+Task 4: Using the same plot as Task 3, change the x and y axes titles, create a plot title, and change the basic text themes (color, size, face) for the x and y axes and the title. 
+
+```{r Exercise 3 task 4}
+#copy code from above
+
+#x-axis title
+
+#y-axis title
+
+#plot title
+
+#themes function
+
+#axis titles color, size, face
+
+#plot title color, size, face
+
+
+```
+
+---
+
+
+Exercise 4
+
+This is our final exercise that will combine all of the information learned today. We again are using the bird count dataset. 
+
+Task 1: Using the vetted temperature data from Exercise 3 task 1 and 2, create a scatterplot of Starting and Ending temperatures faceted by state. Make the shape a global parameter to equal 22. Use color and fill to make the point shape different colors. 
+
+```{r Exercise 4 Task 1}
+#use saved data from exercise 3 task 1 and 2 (temperature)
+
+#plot stating and ending temperatures (scatterplot), shape 22, color and fill of shape different colors
+
+#facet by state
+```
+
+Task 2: Using the figure you created in Task 1, change the aesthetics (text, axis gap, legend, colors, etc.) to look appropriate and ready for publication. 
+
+```{r Exercise 4 Task 2}
+#copy figure code from Task 1
+
+#are colors appropriate for the data type? 
+
+#remove axis gap
+
+#change text themes
+
+```
+
+
+Task 3 Challenge 1: Create a boxplot of non-zero abundances from all stops for the species in the Aphelocoma genus. Remove any outlandish numbers (extreme outliers). Change themes and aesthetics to make it look publication quality.
+
+```{r Exercise 4 task 3 Challenge 1}
+#read in the data
+
+#use dplyr functions
+#sparate ScientificName to get Genus
+
+#filter for Aphelocoma
+
+#gather all stop columns together
+
+#filter for non zeros and remove outlandish numbers
+
+#plot data
+
+#boxplot geometry with aesthetics
+
+#y-axis label
+
+#x-axis label
+
+#remove ugly gap between data and x-axis and create appropriate y-axis scale
+
+#text themes 
+
+
+```
+
+Task 4 Challenge 2: Plot the total number of observations for species within the Sayornis genera by state. Manipulate themes and aesthetics to look publication quality. Change the fill of the bars to vary by species and facet by state. 
+
+Hint: Use stat = identity for a bar chart
+
+```{r Exercise 4 task 4 Challenge 2}
+
+#use dplyr functions
+
+#separate to get genus and species column
+
+#filter for Sayornis
+
+#gather stop columns
+
+#group by species AND state
+
+#summarize to get nuymber of observations
+
+#plot species and number of observations
+
+#barchart geometry, color(fill) must vary by species
+
+#x-axis label
+
+#y-axis label
+
+#change y-axis scale and remove gap between data and x-axis 
+
+#text themes
+
+#facet the graph by state
+
+
+```
